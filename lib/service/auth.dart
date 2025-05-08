@@ -1,4 +1,3 @@
-import 'package:authenticationapp/home.dart';
 import 'package:authenticationapp/service/database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -90,15 +89,15 @@ class AuthMethods {
         throw Exception('Failed to get user details after Google sign in');
       }
 
-      // Store user information in Firestore
-      await _storeUserData(user);
+      // Get the Google profile photo URL
+      final String? photoURL = googleSignInAccount.photoUrl;
+
+      // Store user information in Firestore, including the Google profile photo
+      await _storeUserData(user, googlePhotoURL: photoURL);
 
       // Navigate to home screen
       if (context.mounted) {
-        Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => const Home())
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       }
       
       return user;
@@ -164,10 +163,7 @@ class AuthMethods {
 
           // Navigate to home screen
           if (context.mounted) {
-            Navigator.pushReplacement(
-              context, 
-              MaterialPageRoute(builder: (context) => const Home())
-            );
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
           }
           
           return user;
@@ -224,8 +220,13 @@ class AuthMethods {
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        await user.updateDisplayName(displayName);
-        await user.updatePhotoURL(photoURL);
+        if (displayName != null) {
+          await user.updateDisplayName(displayName);
+        }
+        
+        if (photoURL != null) {
+          await user.updatePhotoURL(photoURL);
+        }
         
         // Update Firestore data as well
         if (displayName != null || photoURL != null) {
@@ -239,6 +240,7 @@ class AuthMethods {
             updateData['imgUrl'] = photoURL;
           }
           
+          updateData['lastUpdated'] = FieldValue.serverTimestamp();
           await _databaseMethods.updateUser(user.uid, updateData);
         }
       } else {
@@ -250,20 +252,50 @@ class AuthMethods {
   }
 
   /// Store user data in Firestore
-  Future<void> _storeUserData(User user) async {
+  Future<void> _storeUserData(User user, {String? googlePhotoURL}) async {
     try {
-      // Prepare user data map
-      final Map<String, dynamic> userInfoMap = {
-        "email": user.email,
-        "name": user.displayName ?? user.email?.split('@')[0] ?? 'User',
-        "imgUrl": user.photoURL ?? "",
-        "id": user.uid,
-        "lastLogin": DateTime.now().millisecondsSinceEpoch,
-        "createdAt": FieldValue.serverTimestamp(),
-      };
-
-      // Add or update user in Firestore
-      await _databaseMethods.addUser(user.uid, userInfoMap);
+      // Check if user document already exists
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      // If user exists and already has an imgUrl, don't overwrite it
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>?;
+        
+        // Only update fields that should be updated on login
+        final Map<String, dynamic> updateData = {
+          "email": user.email,
+          "lastLogin": FieldValue.serverTimestamp(),
+        };
+        
+        // If user doesn't have an image URL set already, use Google's
+        if ((userData?['imgUrl'] == null || userData!['imgUrl'].isEmpty) && 
+            (userData?['imgBase64'] == null || userData!['imgBase64'].isEmpty) && 
+            (googlePhotoURL != null && googlePhotoURL.isNotEmpty)) {
+          updateData["imgUrl"] = googlePhotoURL;
+        }
+        
+        // If user name is null or empty, update it
+        if (userData?['name'] == null || userData!['name'].isEmpty) {
+          updateData["name"] = user.displayName ?? user.email?.split('@')[0] ?? 'User';
+        }
+        
+        await _databaseMethods.updateUser(user.uid, updateData);
+      } else {
+        // For new users, create a complete profile
+        final Map<String, dynamic> userInfoMap = {
+          "email": user.email,
+          "name": user.displayName ?? user.email?.split('@')[0] ?? 'User',
+          "imgUrl": googlePhotoURL ?? user.photoURL ?? "",
+          "id": user.uid,
+          "lastLogin": FieldValue.serverTimestamp(),
+          "createdAt": FieldValue.serverTimestamp(),
+        };
+        
+        await _databaseMethods.addUser(user.uid, userInfoMap);
+      }
     } catch (e) {
       // Log error but don't throw - authentication still succeeded
       debugPrint('Error storing user data: ${e.toString()}');
