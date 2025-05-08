@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "42580988398",
+    "firebase_url": "https://authenticationapp-61092-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "authenticationapp-61092",
+    "storage_bucket": "authenticationapp-61092.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:42580988398:android:c21f6a004166c211483eff",
+        "android_client_info": {
+          "package_name": "com.example.authenticationapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "42580988398-oosgp97qrfk794fke1na5dpta2qdi9av.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.authenticationapp",
+            "certificate_hash": "663b182f9f0c2e32bd55eb1ac073e56631c0a7e5"
+          }
+        },
+        {
+          "client_id": "42580988398-l614n1t84du4qqdsa7te98pbut37rfa6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAthoe2ejl2B8yzWtg9VMIXfH6fslk98No"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "42580988398-l614n1t84du4qqdsa7te98pbut37rfa6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
