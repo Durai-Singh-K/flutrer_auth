@@ -54,60 +54,63 @@ class AuthMethods {
     }
   }
 
-  /// Sign in with Google
-  Future<User?> signInWithGoogle(BuildContext context) async {
-    try {
-      // Start the Google sign-in process
-      final GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
-      
-      if (googleSignInAccount == null) {
-        // User canceled the sign-in
-        throw PlatformException(
-          code: 'ERROR_ABORTED_BY_USER',
-          message: 'Sign in aborted by user',
-        );
-      }
-
-      // Get authentication details
-      final GoogleSignInAuthentication googleSignInAuthentication = 
-          await googleSignInAccount.authentication;
-
-      // Create credential for Firebase
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleSignInAuthentication.idToken,
-        accessToken: googleSignInAuthentication.accessToken,
+/// Sign in with Google
+Future<User?> signInWithGoogle(BuildContext context) async {
+  try {
+    // Sign out first to force account selection dialog
+    await _googleSignIn.signOut();
+    
+    // Start the Google sign-in process with prompt for account selection
+    final GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
+    
+    if (googleSignInAccount == null) {
+      // User canceled the sign-in
+      throw PlatformException(
+        code: 'ERROR_ABORTED_BY_USER',
+        message: 'Sign in aborted by user',
       );
-
-      // Sign in to Firebase
-      final UserCredential userCredential = 
-          await _auth.signInWithCredential(credential);
-
-      // Get user details
-      final User? user = userCredential.user;
-      
-      if (user == null) {
-        throw Exception('Failed to get user details after Google sign in');
-      }
-
-      // Get the Google profile photo URL
-      final String? photoURL = googleSignInAccount.photoUrl;
-
-      // Store user information in Firestore, including the Google profile photo
-      await _storeUserData(user, googlePhotoURL: photoURL);
-
-      // Navigate to home screen
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      }
-      
-      return user;
-    } catch (e) {
-      if (e is PlatformException) {
-        rethrow;
-      }
-      throw Exception('Google sign in failed: ${e.toString()}');
     }
+
+    // Get authentication details
+    final GoogleSignInAuthentication googleSignInAuthentication = 
+        await googleSignInAccount.authentication;
+
+    // Create credential for Firebase
+    final AuthCredential credential = GoogleAuthProvider.credential(
+      idToken: googleSignInAuthentication.idToken,
+      accessToken: googleSignInAuthentication.accessToken,
+    );
+
+    // Sign in to Firebase
+    final UserCredential userCredential = 
+        await _auth.signInWithCredential(credential);
+
+    // Get user details
+    final User? user = userCredential.user;
+    
+    if (user == null) {
+      throw Exception('Failed to get user details after Google sign in');
+    }
+
+    // Get the Google profile photo URL
+    final String? photoURL = googleSignInAccount.photoUrl;
+
+    // Store user information in Firestore, including the Google profile photo
+    await _storeUserData(user, googlePhotoURL: photoURL);
+
+    // Navigate to home screen
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    }
+    
+    return user;
+  } catch (e) {
+    if (e is PlatformException) {
+      rethrow;
+    }
+    throw Exception('Google sign in failed: ${e.toString()}');
   }
+}
 
   /// Sign in with Apple
   Future<User?> signInWithApple({
